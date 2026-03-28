@@ -1,30 +1,24 @@
 from fastapi import FastAPI
 
-# FastAPIの本体を作ります
 app = FastAPI()
 
-# 「/」（トップページ）にアクセスしたときの処理
 @app.get("/")
 def read_root():
-    return {"status": "success", "message": "Pythonエンジニアへの第一歩！"}
+    return {"message": "Python修行中! API進化中!"}
 
-# 「/items/1」のようにアクセスしたときの処理
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "query": q}
-
-@app.get("/add")
-def add_numbers(a: int, b: int):
-    # ここにAtCoderで使うようなロジックを書けます
-    result = a + b
-    return {"formula": f"{a} + {b}", "result": result}
-
-@app.get("/judge/{number}")
-def judge_number(number: int):
-    # ここがAtCoderでよく使う「if文」の基礎です！
-    if number  == 7:
-        result = "超ラッキー！大当たり！"
+#ここからが改善ポイント！
+@app.get("/judge/{score}")
+def judge_score(score: int):
+    #practice.pyで学んだ[if-elif-else]をここに流し込む
+    if score >= 80:
+        evaluation = "Aランク:天才か！？"
+    elif score >= 60:
+        evaluation = "Bランク:合格！やるね！"
     else:
-        result = "残念、ラッキーセブンではありません。"
-    
-    return {"input": number, "kekka": result, "message": "自作の判定器が動いた！"}
+        evaluation = "Cランク:不合格。伸びしろしかない！"
+
+    return {
+        "score_input": score,
+        "result": evaluation,
+        "status": "APIが自分で考えて返事をしたぞ！"
+    }
