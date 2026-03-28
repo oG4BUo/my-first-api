@@ -18,3 +18,13 @@ def add_numbers(a: int, b: int):
     # ここにAtCoderで使うようなロジックを書けます
     result = a + b
     return {"formula": f"{a} + {b}", "result": result}
+
+@app.get("/judge/{number}")
+def judge_number(number: int):
+    # ここがAtCoderでよく使う「if文」の基礎です！
+    if number % 2 == 0:
+        result = "偶数（Even）"
+    else:
+        result = "奇数（Odd）"
+    
+    return {"input": number, "judgment": result, "message": "自作の判定器が動いた！"}
