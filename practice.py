@@ -1,8 +1,8 @@
-tensuu = 75
+friends = ["田中", "佐藤", "鈴木", "小田"]
 
-if tensuu >= 80:
-    print("【評価：A】合格！最高だね！")
-elif tensuu >= 60:
-    print("【評価：B】合格！まずまずだね。")
-else:
-    print("【評価：C】不合格。次は頑張ろう。")
+ninzu = len(friends)
+print("現在のメンバーは" + str(ninzu) + "人です。")
+
+print("リーダーは" + friends[0] + "さんです。")
+
+print("新入りは" + friends[-1] + "さんです。")

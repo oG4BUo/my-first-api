@@ -22,3 +22,13 @@ def judge_score(score: int):
         "result": evaluation,
         "status": "APIが自分で考えて返事をしたぞ！"
     }
+
+# 既存のコードの下に追記
+@app.get("/friends")
+def get_friends():
+    member_list = ["田中", "佐藤", "鈴木", "小田"]
+    return {
+        "count": len(member_list),
+        "all_members": member_list,
+        "leader": member_list[0]
+    }
