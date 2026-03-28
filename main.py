@@ -32,3 +32,14 @@ def get_friends():
         "all_members": member_list,
         "leader": member_list[0]
     }
+
+db_members = ["田中", "佐藤", "鈴木"]
+
+@app.get("/add/{name}")
+def add_member(name: str):
+    #名簿に、URLで送られてきた名前を追加する
+    db_members.append(name)
+    return{
+        "message": name + "さんを名簿に追加しました！",
+        "current_members": db_members
+    }
