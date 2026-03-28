@@ -27,4 +27,4 @@ def judge_number(number: int):
     else:
         result = "残念、ラッキーセブンではありません。"
     
-    return {"input": number, "judgment": result, "message": "自作の判定器が動いた！"}
+    return {"input": number, "kekka": result, "message": "自作の判定器が動いた！"}
