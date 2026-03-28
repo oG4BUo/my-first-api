@@ -22,9 +22,9 @@ def add_numbers(a: int, b: int):
 @app.get("/judge/{number}")
 def judge_number(number: int):
     # ここがAtCoderでよく使う「if文」の基礎です！
-    if number % 2 == 0:
-        result = "偶数（Even）"
+    if number  == 7:
+        result = "超ラッキー！大当たり！"
     else:
-        result = "奇数（Odd）"
+        result = "残念、ラッキーセブンではありません。"
     
     return {"input": number, "judgment": result, "message": "自作の判定器が動いた！"}
