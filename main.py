@@ -62,3 +62,31 @@ def universal_calculator(mode: str, a: int, b: int):
         "answer": result,
         "message": f"{mode}モードで計算しました！"
     }
+
+my_status = {
+    "name": "小田",
+    "job": "Python見習い魔導士",
+    "level": 12,
+    "hp": 150,
+    "mp": 80,
+    "items": ["薬草", "古い杖", "デバッグの書"]
+}
+
+@app.get("/levelup")
+def level_up():
+    #辞書のlevelを１増やす
+    my_status["level"] = my_status["level"] + 1
+
+    #ついでにHPも１０増やす
+    my_status["hp"] = my_status["hp"] + 10
+
+    return {
+        "message": "レベルアップしました！",
+        "new_level": my_status["level"],
+        "new_hp": my_status["hp"]
+    }
+
+@app.get("/me")
+def get_my_status():
+    #辞書をそのまま返すと、ブラウザがきれいなJSONにしてくれます
+    return my_status
