@@ -43,3 +43,22 @@ def add_member(name: str):
         "message": name + "さんを名簿に追加しました！",
         "current_members": db_members
     }
+
+@app.get("/calc/{mode}/{a}/{b}")
+def universal_calculator(mode: str, a: int, b: int):
+    #モードによって計算方法を変える
+    if mode == "plus":
+        result = a + b
+        sign = "+"
+    elif mode == "minus":
+        result = a - b
+        sign = "-"
+    else:
+        #足し算でも引き算でもないとき
+        return {"error": "plus か minus を選んでね!"}
+    
+    return {
+        "operation": f"{a} {sign} {b}",
+        "answer": result,
+        "message": f"{mode}モードで計算しました！"
+    }
