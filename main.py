@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 app = FastAPI()
+users_db = {} #ユーザーデータを保存するための箱を用意
 
 @app.get("/")
 def read_root():
@@ -87,17 +88,26 @@ def level_up():
     else:
         message = "レベルアップしました！"
 
-    return {
+    return { 
         "message": message,
         "new_level": my_status["level"],
         "current_items": my_status["items"]
     }
 
+@app.get("/register/{name}")
+def register_user(name: str):
+    #名簿に、その名前を追加する
+   new_user = {"name": name, "level": 1}
+   users_db[name] = new_user #準備した箱に入れる
+   return {"message": "登録完了", "user": new_user}
 
-@app.get("/me")
-def get_my_status():
-    #辞書をそのまま返すと、ブラウザがきれいなJSONにしてくれます
-    return my_status
+@app.get("/user/{name}")
+def get_user_status(name: str):
+    #名簿の中に、その名前に人がいるかどうかチェック
+    if name in users_db:
+        return users_db[name]
+    else:
+        return {"error": f"{name}さんはまだ登録されていません！ /register/{name}で登録してね"}
 
 @app.get("/getitem/{item_name}")
 def get_item(item_name: str):
@@ -108,3 +118,17 @@ def get_item(item_name: str):
         "message": f"新しいアイテム{item_name}を手に入れた！",
         "all_items": my_status["items"]
     }
+
+@app.get("/levelup/{name}")
+def level_up_user(name: str):
+    #1,名簿にその人がいるか確認
+    if name in users_db:
+        #2,レベルを1上げる
+        users_db[name]["level"] += 1
+        return {
+            "message": f"{name}さんのレベルが上がった！",
+            "new_data": users_db[name]
+        }
+    else:
+        return {"error": f"{name}さんはまだ登録されていません！"}
+    
