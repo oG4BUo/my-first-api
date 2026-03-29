@@ -80,13 +80,31 @@ def level_up():
     #ついでにHPも１０増やす
     my_status["hp"] = my_status["hp"] + 10
 
+    #もしレベルが20以上になったら、職業を書き換える(進化！)
+    if my_status["level"] >= 20:
+        my_status["job"] = "Python上級魔導士(プロ)"
+        message = "おめでとう！ジョブチェンジしました！"
+    else:
+        message = "レベルアップしました！"
+
     return {
-        "message": "レベルアップしました！",
+        "message": message,
+        "current_job": my_status["job"],
         "new_level": my_status["level"],
-        "new_hp": my_status["hp"]
     }
+
 
 @app.get("/me")
 def get_my_status():
     #辞書をそのまま返すと、ブラウザがきれいなJSONにしてくれます
     return my_status
+
+@app.get("/getitem/{item_name}")
+def get_item(item_name: str):
+    #my_status の中の"items"に、新しいアイテムを追加する
+    my_status["items"].append(item_name)
+
+    return {
+        "message": f"新しいアイテム{item_name}を手に入れた！",
+        "all_items": my_status["items"]
+    }
