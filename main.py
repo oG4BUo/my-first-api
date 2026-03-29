@@ -74,14 +74,14 @@ my_status = {
 
 @app.get("/levelup")
 def level_up():
-    #辞書のlevelを１増やす
     my_status["level"] = my_status["level"] + 1
-
-    #ついでにHPも１０増やす
     my_status["hp"] = my_status["hp"] + 10
 
-    #もしレベルが20以上になったら、職業を書き換える(進化！)
-    if my_status["level"] >= 20:
+    #レベル３０になったら、伝説のアイテムをご褒美にあげる
+    if my_status["level"] == 30:
+        my_status["items"].append("★最強のキーボード")
+        message = "レベル30到達! ご褒美をもらったぞ！"
+    elif my_status["level"] >= 20:
         my_status["job"] = "Python上級魔導士(プロ)"
         message = "おめでとう！ジョブチェンジしました！"
     else:
@@ -89,8 +89,8 @@ def level_up():
 
     return {
         "message": message,
-        "current_job": my_status["job"],
         "new_level": my_status["level"],
+        "current_items": my_status["items"]
     }
 
 
