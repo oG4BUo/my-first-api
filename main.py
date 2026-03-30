@@ -1,7 +1,24 @@
 from fastapi import FastAPI
 
+import json
+import os
+
+# --- 記憶の石（ファイル名） ---
+DB_FILE = "users_db.json"
+
+# --- 起動時にファイルを読み込む魔法 ---
+if os.path.exists(DB_FILE):
+    with open(DB_FILE, "r", encoding="utf-8") as f:
+        users_db = json.load(f)
+else:
+    users_db = {}
+
+# --- データを保存する魔法（関数化しておくと便利） ---
+def save_db():
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(users_db, f, indent=4, ensure_ascii=False)
+
 app = FastAPI()
-users_db = {} #ユーザーデータを保存するための箱を用意
 
 @app.get("/")
 def read_root():
@@ -97,8 +114,9 @@ def level_up():
 @app.get("/register/{name}")
 def register_user(name: str):
     #名簿に、その名前を追加する
-   new_user = {"name": name, "level": 1}
+   new_user = {"name": name, "level": 1, "hp": 100, "job": "見習い", "items": []}
    users_db[name] = new_user #準備した箱に入れる
+   save_db() #★ここでセーブ
    return {"message": "登録完了", "user": new_user}
 
 @app.get("/user/{name}")
@@ -125,10 +143,69 @@ def level_up_user(name: str):
     if name in users_db:
         #2,レベルを1上げる
         users_db[name]["level"] += 1
+        users_db[name]["hp"] += 10 #レベルが上がるとHPも10増える仕様にする
+        save_db() #★ここでセーブ
         return {
             "message": f"{name}さんのレベルが上がった！",
             "new_data": users_db[name]
         }
     else:
         return {"error": f"{name}さんはまだ登録されていません！"}
-    
+
+import random
+
+@app.get("/battle/{name1}/{name2}")
+def battle(name1: str, name2: str):
+    if name1 not in users_db or name2 not in users_db:
+        return {"error": "対戦相手が見つかりません"}
+
+    p1_power = (users_db[name1]["level"] * 3) + random.randint(1, 10)
+    p2_power = (users_db[name2]["level"] * 3) + random.randint(1, 10)
+
+    if p1_power > p2_power:
+        winner, loser = name1, name2
+    elif p2_power > p1_power:
+        winner, loser = name2, name1
+    else:
+        return {"result": "互角の戦い！", "p1": name1, "p2": name2}
+
+    # 勝敗が決まった後の処理
+    if "薬草" in users_db[loser]["items"]:
+        users_db[loser]["items"].remove("薬草")
+        message = f"{winner}の勝利！しかし{loser}は「薬草」でレベル減少を防いだ！"
+        users_db[winner]["level"] += 1 # 勝者はレベルアップ
+    else:
+        message = f"{winner}の勝利！{loser}はレベルが下がってしまった..."
+        users_db[winner]["level"] += 1
+        if users_db[loser]["level"] > 1:
+            users_db[loser]["level"] -= 1
+
+    save_db() # 忘れずにセーブ
+
+    return {
+        "result": message,
+        "p1_status": users_db[name1],
+        "p2_status": users_db[name2]
+    }
+
+@app.get("/reset/{name}")
+def reset_user(name: str):
+    if name in users_db:
+        users_db[name]["level"] = 1
+        users_db[name]["hp"] = 100
+        save_db() #忘れずにセーブ
+        return {"message": f"{name}を初期状態に戻しました。修行しなおしだ！", "data": users_db[name]}
+    return {"error": "ユーザーが見つかりません"}
+
+@app.get("/getitem/{name}/{item_name}")
+def get_item(name: str, item_name: str):
+    #1, 名簿にその人がいるか確認
+    if name in users_db:
+        #２．指定された人のitemsに追加する
+        users_db[name]["items"].append(item_name)
+        save_db() #★ここでセーブ
+        return {
+            "message": f"{name}が新しいアイテム【{item_name}】を手に入れた！",
+            "all_items": users_db[name]["items"]
+        }
+    return {"error": f"{name}さんはまだ登録されていません!"}
