@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>魔導士ギルド・管理パネル</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #eef2f7; color: #333; padding: 40px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .input-group { margin-bottom: 20px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-check { background: #3498db; color: white; }
+        .btn-up { background: #2ecc71; color: white; }
+        .btn-item { background: #f1c40f; color: black; }
+        .btn-reset { background: #e74c3c; color: white; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+        #log { margin-top: 25px; padding: 15px; background: #2c3e50; color: #ecf0f1; border-radius: 8px; min-height: 100px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧙‍♂️ 魔導士ギルド管理</h1>
+        
+        <div class="input-group">
+            <input type="text" id="userName" placeholder="魔導士の名前（例：Jon Smith）">
+        </div>
+
+        <div class="button-grid">
+            <button class="btn-check" onclick="apiCall('user')">ステータス確認</button>
+            <button class="btn-up" onclick="apiCall('levelup')">レベルアップ！</button>
+            <button class="btn-item" onclick="getItem()">薬草をゲット</button>
+            <button class="btn-reset" onclick="apiCall('reset')">リセット(禁忌)</button>
+
+            <button style="background: #8e44ad; color: white;" onclick="battleWithGod()">神様とバトル！</button>
+        </div>
+
+        <div id="log">ログがここに表示されます...</div>
+    </div>
+
+    <script>
+        const logArea = document.getElementById('log');
+
+        async function apiCall(endpoint) {
+            const name = document.getElementById('userName').value;
+            if (!name) return alert("名前を入れてね！");            
+            const response = await fetch(`/${endpoint}/${name}`);
+            const data = await response.json();
+            logArea.innerText = "【魔法発動】\n" + JSON.stringify(data, null, 2);
+        }
+
+        async function getItem() {
+            const name = document.getElementById('userName').value;
+            if (!name) return alert("名前を入れてね！");
+            
+            // 前に作った getitem/{name}/{item_name} を叩く
+            const response = await fetch(`/getitem/${name}/薬草`);
+            const data = await response.json();
+            logArea.innerText = "【アイテム取得】\n" + JSON.stringify(data, null, 2);
+        }
+        // ★ここに追加！バトル用のJavaScript関数
+        async function battleWithGod() {
+            const name = document.getElementById('userName').value;
+            if (!name) return alert("名前を入れてね！");
+            
+            const response = await fetch(`/battle/${name}/プログラミングの神様`);
+            const data = await response.json();
+            
+            // 結果のメッセージ(result)を表示する
+            logArea.innerText = "【決戦の結果】\n" + data.result;
+        }
+    </script>
+</body>
+</html>

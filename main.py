@@ -19,6 +19,17 @@ def save_db():
         json.dump(users_db, f, indent=4, ensure_ascii=False)
 
 app = FastAPI()
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+
+#staticフォルダを、ブラウザから見えるように公開する.
+app.mount("/static", StaticFiles(directory="static"), name="static") 
+
+@app.get("/panel", response_class=HTMLResponse)
+def read_panel():
+    #index.htmlの中身を読み取ってブラウザに返す
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
 
 @app.get("/")
 def read_root():
