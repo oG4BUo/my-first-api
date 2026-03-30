@@ -17,6 +17,11 @@
         .btn-reset { background: #e74c3c; color: white; }
         button:hover { opacity: 0.8; transform: translateY(-2px); }
         #log { margin-top: 25px; padding: 15px; background: #2c3e50; color: #ecf0f1; border-radius: 8px; min-height: 100px; font-family: monospace; }
+        
+        /* テーブルの見た目も整えます */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #34495e; color: white; }
     </style>
 </head>
 <body>
@@ -24,7 +29,7 @@
         <h1>🧙‍♂️ 魔導士ギルド管理</h1>
         
         <div class="input-group">
-            <input type="text" id="userName" placeholder="魔導士の名前（例：Jon Smith）">
+            <input type="text" id="userName" placeholder="魔導士の名前（例：小田）">
         </div>
 
         <div class="button-grid">
@@ -32,11 +37,25 @@
             <button class="btn-up" onclick="apiCall('levelup')">レベルアップ！</button>
             <button class="btn-item" onclick="getItem()">薬草をゲット</button>
             <button class="btn-reset" onclick="apiCall('reset')">リセット(禁忌)</button>
-
             <button style="background: #8e44ad; color: white;" onclick="battleWithGod()">神様とバトル！</button>
         </div>
 
         <div id="log">ログがここに表示されます...</div>
+
+        <h2 style="margin-top: 40px;">🏆 最強魔導士ランキング</h2>
+        <button class="btn-check" style="width: 100%;" onclick="updateRanking()">ランキング更新</button>
+        <table id="rankingTable">
+            <thead>
+                <tr>
+                    <th>順位</th>
+                    <th>名前</th>
+                    <th>Lv</th>
+                    <th>職業</th>
+                </tr>
+            </thead>
+            <tbody id="rankingBody">
+                </tbody>
+        </table>
     </div>
 
     <script>
@@ -53,22 +72,37 @@
         async function getItem() {
             const name = document.getElementById('userName').value;
             if (!name) return alert("名前を入れてね！");
-            
-            // 前に作った getitem/{name}/{item_name} を叩く
             const response = await fetch(`/getitem/${name}/薬草`);
             const data = await response.json();
             logArea.innerText = "【アイテム取得】\n" + JSON.stringify(data, null, 2);
         }
-        // ★ここに追加！バトル用のJavaScript関数
+
         async function battleWithGod() {
             const name = document.getElementById('userName').value;
             if (!name) return alert("名前を入れてね！");
-            
             const response = await fetch(`/battle/${name}/プログラミングの神様`);
             const data = await response.json();
-            
-            // 結果のメッセージ(result)を表示する
             logArea.innerText = "【決戦の結果】\n" + data.result;
+        }
+
+        // ★ランキング更新関数も <script> の中に！
+        async function updateRanking() {
+            const response = await fetch('/ranking');
+            const users = await response.json();
+            const tbody = document.getElementById('rankingBody');
+            
+            tbody.innerHTML = ""; // 一度空にする
+
+            users.forEach((user, index) => {
+                const row = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${user.name}</td>
+                        <td>${user.level}</td>
+                        <td>${user.job}</td>
+                    </tr>`;
+                tbody.innerHTML += row;
+            });
         }
     </script>
 </body>

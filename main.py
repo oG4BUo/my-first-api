@@ -220,3 +220,14 @@ def get_item(name: str, item_name: str):
             "all_items": users_db[name]["items"]
         }
     return {"error": f"{name}さんはまだ登録されていません!"}
+
+@app.get("/ranking")
+def get_ranking():
+    #1. 辞書からユーザーのリストを取り出す
+    users_list = list(users_db.values())
+
+    #2. レベルが高い順に並び変える
+    #lambdaを使ってlevelを基準にソートする
+    sorted_users = sorted(users_list, key=lambda x: x["level"], reverse=True)
+
+    return sorted_users
