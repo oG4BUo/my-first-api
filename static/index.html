@@ -29,7 +29,7 @@
         <h1>🧙‍♂️ 魔導士ギルド管理</h1>
         
         <div class="input-group">
-            <input type="text" id="userName" placeholder="魔導士の名前（例：小田）">
+            <input type="text" id="userName" placeholder="魔導士の名前（例：Jon Smith）">
         </div>
 
         <div class="button-grid">
@@ -38,6 +38,8 @@
             <button class="btn-item" onclick="getItem()">薬草をゲット</button>
             <button class="btn-reset" onclick="apiCall('reset')">リセット(禁忌)</button>
             <button style="background: #8e44ad; color: white;" onclick="battleWithGod()">神様とバトル！</button>
+
+            <button id="questBtn" style="background: #e67e22; color: white;" onclick="goQuest()">探索に出発！</button>
         </div>
 
         <div id="log">ログがここに表示されます...</div>
@@ -104,6 +106,34 @@
                 tbody.innerHTML += row;
             });
         }
+        // ...（前の関数の終わり「}」の後ろに追記）...
+        async function goQuest() {
+            const name = document.getElementById('userName').value;
+            if (!name) return alert("名前を入れてね！");
+
+            const btn = document.getElementById('questBtn');
+            const logArea = document.getElementById('log');
+
+            // ボタンを一時的に押せなくする（連打防止！）
+            btn.disabled = true;
+            btn.innerText = "探索中... (5秒待ち)";
+            logArea.innerText = "⚔️ 周囲を警戒しながら探索しています...";
+
+            // PythonのAPI（/quest/名前）を叩きに行く
+            const response = await fetch(`/quest/${name}`);
+            const data = await response.json();
+
+            // 5秒後、結果が返ってきたら表示する
+            logArea.innerText = "【探索結果】\n" + data.message;
+        
+            // ボタンを元に戻す
+            btn.disabled = false;
+            btn.innerText = "探索に出発！";
+        
+            // ついでにランキングも最新にする
+            updateRanking();
+        }
+    
     </script>
 </body>
 </html>

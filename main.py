@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 import json
 import os
+import asyncio
 
 # --- 記憶の石（ファイル名） ---
 DB_FILE = "users_db.json"
@@ -132,11 +133,16 @@ def register_user(name: str):
 
 @app.get("/user/{name}")
 def get_user_status(name: str):
-    #名簿の中に、その名前に人がいるかどうかチェック
-    if name in users_db:
-        return users_db[name]
+    if name not in users_db:
+        return {"error": "存在しない魔導士です"}
+    
+    #★ここに追加：魔導士チェック
+    if "✨伝説の魔導書" in users_db[name]["items"]:
+        users_db[name]["job"] = "極・Python大魔導士"
     else:
-        return {"error": f"{name}さんはまだ登録されていません！ /register/{name}で登録してね"}
+        users_db[name]["job"] = "見習い"
+
+    return users_db[name]
 
 @app.get("/getitem/{item_name}")
 def get_item(item_name: str):
@@ -231,3 +237,40 @@ def get_ranking():
     sorted_users = sorted(users_list, key=lambda x: x["level"], reverse=True)
 
     return sorted_users
+
+@app.get("/quest/{name}")
+async def start_quest(name: str):
+    if name not in users_db:
+        return {"error": "登録されていません"}
+    
+    if "luck_stack" not in users_db[name]:
+        users_db[name]["luck_stack"] = 0
+
+    await asyncio.sleep(5)
+    
+    # --- 修正ポイント：最初に「なし」で初期化しておく ---
+    found_item = "なし" 
+    
+    luck = random.randint(1, 100)
+    bonus = users_db[name]["luck_stack"]
+    
+    if (luck + bonus) > 95:
+        found_item = "✨伝説の魔導書"
+        users_db[name]["luck_stack"] = 0 
+    elif (luck + bonus) > 70:
+        found_item = "銀の鍵"
+        users_db[name]["luck_stack"] = 0
+    else:
+        # ここを通っても、一番上で決めた「なし」が維持されるのでエラーにならない
+        users_db[name]["luck_stack"] += 5 
+        message = f"何も見つからなかった...（現在、徳が {users_db[name]['luck_stack']} 溜まっている）"
+
+    # ここで安全にチェックできる！
+    if found_item != "なし":
+        users_db[name]["items"].append(found_item)
+        message = f"探索完了！【{found_item}】を見つけた！（運ボーナス {bonus} 使用）"
+
+    users_db[name]["level"] += 1
+    save_db()
+    
+    return {"message": message, "new_data": users_db[name]}
