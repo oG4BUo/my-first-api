@@ -1,8 +1,11 @@
 from fastapi import FastAPI
+from datetime import datetime
 
 import json
 import os
+import random
 import asyncio
+import time
 
 # --- 記憶の石（ファイル名） ---
 DB_FILE = "users_db.json"
@@ -131,19 +134,6 @@ def register_user(name: str):
    save_db() #★ここでセーブ
    return {"message": "登録完了", "user": new_user}
 
-@app.get("/user/{name}")
-def get_user_status(name: str):
-    if name not in users_db:
-        return {"error": "存在しない魔導士です"}
-    
-    #★ここに追加：魔導士チェック
-    if "✨伝説の魔導書" in users_db[name]["items"]:
-        users_db[name]["job"] = "極・Python大魔導士"
-    else:
-        users_db[name]["job"] = "見習い"
-
-    return users_db[name]
-
 @app.get("/getitem/{item_name}")
 def get_item(item_name: str):
     #my_status の中の"items"に、新しいアイテムを追加する
@@ -169,41 +159,29 @@ def level_up_user(name: str):
     else:
         return {"error": f"{name}さんはまだ登録されていません！"}
 
-import random
+@app.get("/battle/{name}/{enemy}")
+def battle(name: str, enemy: str):
+    user = users_db.get(name)
+    # ★魔導書を持っているかチェック
+    has_grimoire = "✨伝説の魔導書" in user["items"]
 
-@app.get("/battle/{name1}/{name2}")
-def battle(name1: str, name2: str):
-    if name1 not in users_db or name2 not in users_db:
-        return {"error": "対戦相手が見つかりません"}
-
-    p1_power = (users_db[name1]["level"] * 3) + random.randint(1, 10)
-    p2_power = (users_db[name2]["level"] * 3) + random.randint(1, 10)
-
-    if p1_power > p2_power:
-        winner, loser = name1, name2
-    elif p2_power > p1_power:
-        winner, loser = name2, name1
+    if has_grimoire:
+        #魔導書の力で絶対勝つ
+        win = True
+        message = f"【覚醒】{name}は伝説の魔導書を開いた！圧倒的な魔力が{enemy}を包み込む！"
     else:
-        return {"result": "互角の戦い！", "p1": name1, "p2": name2}
+        win = random.choice([True, False])
+        message = f"{name}は{enemy}と戦った！"
 
-    # 勝敗が決まった後の処理
-    if "薬草" in users_db[loser]["items"]:
-        users_db[loser]["items"].remove("薬草")
-        message = f"{winner}の勝利！しかし{loser}は「薬草」でレベル減少を防いだ！"
-        users_db[winner]["level"] += 1 # 勝者はレベルアップ
+    if win:
+        user["level"] += 5
+        result = f"{message}\n勝利! レベルが５上がった！"
     else:
-        message = f"{winner}の勝利！{loser}はレベルが下がってしまった..."
-        users_db[winner]["level"] += 1
-        if users_db[loser]["level"] > 1:
-            users_db[loser]["level"] -= 1
+        user["level"] -= 1
+        result = f"{message}\n敗北...レベルが１下がった。"
 
-    save_db() # 忘れずにセーブ
-
-    return {
-        "result": message,
-        "p1_status": users_db[name1],
-        "p2_status": users_db[name2]
-    }
+    save_db() #★ここでセーブ
+    return {"result": result}
 
 @app.get("/reset/{name}")
 def reset_user(name: str):
@@ -243,34 +221,197 @@ async def start_quest(name: str):
     if name not in users_db:
         return {"error": "登録されていません"}
     
-    if "luck_stack" not in users_db[name]:
-        users_db[name]["luck_stack"] = 0
+    user = users_db[name] # 短く書くために変数に入れます
 
+    # --- ✨【修行ポイント】魔力チェックの門番 ---
+    # まだMPが登録されていない場合や、20未満の場合はここで終了
+    if user.get("mp", 0) < 20:
+        return {
+            "message": f"魔力が足りません！現在【{user.get('mp', 0)}】です。最低20必要です。",
+            "new_data": user
+        }
+
+    # 条件をクリアしたら、先にMPを20消費して保存する
+    user["mp"] -= 20
+    save_db() 
+    # ------------------------------------------
+
+    if "luck_stack" not in user:
+        user["luck_stack"] = 0
+
+    # ここから先の5秒待ちやアイテム抽選は、MPがある人だけが通れる聖域
     await asyncio.sleep(5)
     
-    # --- 修正ポイント：最初に「なし」で初期化しておく ---
     found_item = "なし" 
-    
     luck = random.randint(1, 100)
-    bonus = users_db[name]["luck_stack"]
+    bonus = user["luck_stack"]
     
     if (luck + bonus) > 95:
         found_item = "✨伝説の魔導書"
-        users_db[name]["luck_stack"] = 0 
+        user["luck_stack"] = 0 
     elif (luck + bonus) > 70:
         found_item = "銀の鍵"
-        users_db[name]["luck_stack"] = 0
+        user["luck_stack"] = 0
     else:
-        # ここを通っても、一番上で決めた「なし」が維持されるのでエラーにならない
-        users_db[name]["luck_stack"] += 5 
-        message = f"何も見つからなかった...（現在、徳が {users_db[name]['luck_stack']} 溜まっている）"
+        user["luck_stack"] += 5 
+        message = f"何も見つからなかった...（現在、徳が {user['luck_stack']} 溜まっている）"
 
-    # ここで安全にチェックできる！
     if found_item != "なし":
-        users_db[name]["items"].append(found_item)
+        user["items"].append(found_item)
         message = f"探索完了！【{found_item}】を見つけた！（運ボーナス {bonus} 使用）"
 
-    users_db[name]["level"] += 1
+    user["level"] += 1
     save_db()
     
-    return {"message": message, "new_data": users_db[name]}
+    return {"message": message, "new_data": user}
+
+@app.get("/craft/{name}")
+def craft_item(name: str):
+    user = users_db.get(name)
+    items = user["items"]
+
+    # 錬成のレシピ：　薬草　＋　銀の鍵
+    if "薬草" in items and "銀の鍵" in items:
+        #アイテムを消費する
+        items.remove("薬草")
+        items.remove("銀の鍵")
+        
+        #新しい強力なアイテムを付与
+        new_item = "💎賢者の石"
+        items.append(new_item)
+
+        user["level"] += 10
+        save_db()
+        return {"message": f"錬成成功! 【{new_item}】が誕生し、レベルが10上がった!"}
+    else:
+        return{"message": "材料（薬草と銀の鍵）が足りません..."}
+    
+@app.get("/user/{name}")
+def get_user(name: str):
+    if name not in users_db:
+        return {"error": "NotFound"}
+    
+    user = users_db[name]
+    now = time.time()
+    
+    # --- ✨ ここで最大MPを再計算！ ---
+    # レベルを取り出して計算（レベルがなければ1とする）
+    level = user.get("level", 1)
+    # --- ✨【称号進化システム】レベルに応じてジョブを書き換える ---
+    lvl = user.get("level", 1)
+    if lvl >= 30:
+        user["job"] = "伝説の賢者"
+    elif lvl >= 20:
+        user["job"] = "大魔導士"
+    elif lvl >= 10:
+        user["job"] = "熟練魔導士"
+    elif lvl >= 5:
+        user["job"] = "一人前の魔導士"
+    else:
+        user["job"] = "魔導士の見習い"
+    max_mp = 100 + (level * 10)
+    
+    # 計算した最大値をデータに覚えさせる
+    user["max_mp"] = max_mp
+    # -------------------------------
+
+    last_seen = user.get("last_seen", now)
+    wait_time = int(now - last_seen)
+    items = user.get("items", [])
+    book_count = items.count("✨伝説の魔導書")
+    level = user.get("level", 1)
+
+    if level >= 10 and book_count >= 3:
+        user["is_clear"] = True
+    else:
+        user["is_clear"] = False
+    
+    if "mp" not in user:
+        user["mp"] = 0
+    
+    # 回復処理（100固定ではなく max_mp を使う）
+    recovery = wait_time // 10
+    if recovery > 0:
+        user["mp"] = min(max_mp, user["mp"] + recovery)
+        user["last_seen"] = now
+        save_db() # 変更を保存！
+        
+    return user
+
+@app.get("/ultimate/{name}")
+def ultimate_magic(name: str):
+
+    if name not in users_db:
+        return {"error": "NotFound"}
+    
+    user = users_db[name]
+
+    #魔力が満タンの時だけ発動できる
+    if user.get("mp", 0) < 100:
+        return {"message": "魔力が足りません! 極限までためてください！"}
+    
+    #魔力をすべて解き放つ！
+    user["mp"] = 0
+    user["level"] += 3
+    save_db()
+
+    return {
+        "message": "【極・究極魔法】を発動! レベルが3上がった!",
+        "new_data": user
+    }
+
+@app.get("/create_item/{name}")
+def create_item(name: str):
+    if name not in users_db:
+        return {"error": "NotFound"}
+    
+    user = users_db[name]
+    
+    # 【チェック】MPが30以上あるか？
+    if user.get("mp", 0) < 30:
+        return {"message": "魔力が足りません！(30必要です)", "new_data": user}
+    
+    # 【代償】MPを30消費
+    user["mp"] -= 30
+    
+    # 【錬成】ランダムでアイテムを1つ生成
+    new_item = random.choice(["薬草", "銀の鍵", "不思議な粉"])
+    user["items"].append(new_item)
+    
+    save_db() # 忘れずにセーブ！
+    
+    return {
+        "message": f"魔力を練り上げ、新たに【{new_item}】を錬成した！",
+        "new_data": user
+    }
+
+@app.get("/use_item/{name}")
+def use_item(name: str):
+    if name not in users_db:
+        return {"error": "NotFound"}
+    
+    user = users_db[name]
+    items = user.get("items", [])
+
+    # 【チェック】薬草を持っているか？
+    if "薬草" not in items:
+        return {"message": "薬草を持っていません！", "new_data": user}
+
+    # 【最大MPの確認】
+    max_mp = user.get("max_mp", 100)
+    if user["mp"] >= max_mp:
+        return {"message": "魔力はすでに満タンです！", "new_data": user}
+
+    # 【使用処理】薬草をリストから1つ消す
+    items.remove("薬草")
+    
+    # 【回復】MPを30回復（最大値を超えないように）
+    user["mp"] = min(max_mp, user["mp"] + 30)
+    
+    save_db()
+    
+    return {
+        "message": "薬草を煎じて飲んだ！魔力が30回復したぞ！",
+        "new_data": user
+    }
+

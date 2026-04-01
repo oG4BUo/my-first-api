@@ -22,6 +22,34 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: center; }
         th { background: #34495e; color: white; }
+        /* 金色に輝くアニメーション */
+        .mage-aura {
+            background: linear-gradient(45deg, #f1c40f, #f39c12, #d35400);
+            background-size: 200% 200%;
+            animation: gold-flow 3s ease infinite;
+            color: white !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            border: 2px solid #fff;
+        }
+
+        @keyframes gold-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        /* 伝説の賢者専用：さらに激しいオーラ */
+        .sage-aura {
+            background: linear-gradient(45deg, #8e44ad, #c0392b, #2c3e50);
+            background-size: 400% 400%;
+            animation: sage-flow 2s linear infinite;
+            color: white !important;
+        }
+
+        @keyframes sage-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
 <body>
@@ -38,9 +66,18 @@
             <button class="btn-item" onclick="getItem()">薬草をゲット</button>
             <button class="btn-reset" onclick="apiCall('reset')">リセット(禁忌)</button>
             <button style="background: #8e44ad; color: white;" onclick="battleWithGod()">神様とバトル！</button>
-
+            <button style="background: #1abc9c; color: white;" onclick="craft()">アイテム錬成</button>
             <button id="questBtn" style="background: #e67e22; color: white;" onclick="goQuest()">探索に出発！</button>
+            <button style="background: linear-gradient(45deg, #e74c3c, #8e44ad); color: white; grid-column: span 2;" onclick="apiCall('ultimate')">
+                ✨ 究極魔法発動！ (MP100消費)
+            </button>
+            <button style="background: #16a085; color: white;" onclick="apiCall('create_item')">錬成魔法 (MP30)</button>
+            <button style="background: #27ae60; color: white;" onclick="apiCall('use_item')">薬草を使う (MP+30)</button>
         </div>
+        <div style="margin-top: 20px; background: #dfe6e9; border-radius: 10px; height: 25px; width: 100%; border: 2px solid #2c3e50; overflow: hidden;">
+             <div id="mpBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); transition: width 0.5s ease-out;"></div>
+        </div>
+        <div id="mpText" style="text-align: right; font-weight: bold; color: #2980b9; margin-top: 5px;">MP: 0 / 100</div>
 
         <div id="log">ログがここに表示されます...</div>
 
@@ -65,10 +102,62 @@
 
         async function apiCall(endpoint) {
             const name = document.getElementById('userName').value;
-            if (!name) return alert("名前を入れてね！");            
-            const response = await fetch(`/${endpoint}/${name}`);
-            const data = await response.json();
-            logArea.innerText = "【魔法発動】\n" + JSON.stringify(data, null, 2);
+            if (!name) return alert("名前を入れてね!");
+
+            try {
+                const response = await fetch(`/${endpoint}/${name}`);
+                const data = await response.json();
+
+                // --- 🏆 エンディング演出の魔法 ---
+                if (data.is_clear === true) {
+                    document.body.innerHTML = `
+                        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1c40f, #e67e22); color: white; font-family: 'Hiragino Kaku Gothic ProN', sans-serif; text-align: center;">
+                            <h1 style="font-size: 3em; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">🎉 伝説の終焉 🎉</h1>
+                            <p style="font-size: 1.5em; margin: 20px;">大魔導士 ${name} は、世界に光を取り戻した！</p>
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 15px;">
+                                <p>最終到達レベル: ${data.level}</p>
+                                <p>手に入れた魔導書: 3冊（コンプリート）</p>
+                            </div>
+                            <p style="margin-top: 40px; font-style: italic;">修行完了。お疲れ様でした！</p>
+                            <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">最初から遊ぶ</button>
+                        </div>
+                    `;
+                    return; // 画面を書き換えたので、ここで処理を終了する
+                }
+
+                // --- ゲージ更新の魔法（ここを慎重に！） ---
+                if (data.mp !== undefined) {
+                    const currentMp = data.mp;
+                    // Pythonからmax_mpが届いていればそれを使う、なければ100にする
+                    const maxMp = data.max_mp || 100; 
+                    
+                    // 割合（％）を計算
+                    const mpPercent = (currentMp / maxMp) * 100;
+                    
+                    // ゲージの長さを反映
+                    document.getElementById('mpBar').style.width = mpPercent + "%";
+                    // 文字を「現在 / 最大」に書き換え
+                    document.getElementById('mpText').innerText = `MP: ${currentMp} / ${maxMp}`;
+                }
+
+                // ログエリアの表示
+                logArea.innerText = "【魔法発動結果】\n" + JSON.stringify(data, null, 2);
+                // --- 進化するオーラ判定 ---
+                const container = document.querySelector('.container');
+                // 一旦すべてのオーラクラスを消す
+                container.classList.remove('mage-aura', 'sage-aura');
+
+                if (data.job === "伝説の賢者") {
+                    container.style.border = "5px solid #e74c3c"; // 伝説級は枠が赤く！
+                    container.classList.add('sage-aura'); // 後でCSSを追加
+                } else if (data.job === "大魔導士") {
+                    container.classList.add('mage-aura'); // 金色のオーラ
+                }
+ 
+            } catch (error) {
+                console.error("通信エラー:", error);
+                logArea.innerText = "通信に失敗しました。サーバーの状態を確認してください。";
+            }
         }
 
         async function getItem() {
@@ -87,53 +176,40 @@
             logArea.innerText = "【決戦の結果】\n" + data.result;
         }
 
-        // ★ランキング更新関数も <script> の中に！
         async function updateRanking() {
             const response = await fetch('/ranking');
             const users = await response.json();
             const tbody = document.getElementById('rankingBody');
-            
-            tbody.innerHTML = ""; // 一度空にする
-
+            tbody.innerHTML = ""; 
             users.forEach((user, index) => {
-                const row = `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${user.name}</td>
-                        <td>${user.level}</td>
-                        <td>${user.job}</td>
-                    </tr>`;
+                const row = `<tr><td>${index + 1}</td><td>${user.name}</td><td>${user.level}</td><td>${user.job}</td></tr>`;
                 tbody.innerHTML += row;
             });
         }
-        // ...（前の関数の終わり「}」の後ろに追記）...
+
         async function goQuest() {
             const name = document.getElementById('userName').value;
             if (!name) return alert("名前を入れてね！");
-
             const btn = document.getElementById('questBtn');
-            const logArea = document.getElementById('log');
-
-            // ボタンを一時的に押せなくする（連打防止！）
             btn.disabled = true;
             btn.innerText = "探索中... (5秒待ち)";
             logArea.innerText = "⚔️ 周囲を警戒しながら探索しています...";
-
-            // PythonのAPI（/quest/名前）を叩きに行く
             const response = await fetch(`/quest/${name}`);
             const data = await response.json();
-
-            // 5秒後、結果が返ってきたら表示する
             logArea.innerText = "【探索結果】\n" + data.message;
-        
-            // ボタンを元に戻す
             btn.disabled = false;
             btn.innerText = "探索に出発！";
-        
-            // ついでにランキングも最新にする
             updateRanking();
         }
-    
+
+        async function craft() {
+            const name = document.getElementById('userName').value;
+            if (!name) return alert("名前を入れてね！");
+            const response = await fetch(`/craft/${name}`);
+            const data = await response.json();
+            logArea.innerText = "【錬金術発動】\n" + data.message;
+            updateRanking();
+        }
     </script>
 </body>
 </html>
